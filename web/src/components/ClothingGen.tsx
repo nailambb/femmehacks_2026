@@ -1,4 +1,6 @@
 import { useRef, useState } from 'react'
+import { useQuery } from 'convex/react'
+import { api } from '../../convex/_generated/api'
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -12,11 +14,13 @@ import {
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_KEY;
 
 export default function ClothingGenerator() {
+  const user = useQuery(api.users.getCurrentUser);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [imageLoading, setImageLoading] = useState(false);
   const [base64, setBase64] = useState<{ data: string; mime: string } | null>(null);
   const [response, setResponse] = useState<string>("");
+  const [alteration, setAlteration] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [clothingType, setClothingType] = useState<string>("shirt");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -27,6 +31,7 @@ export default function ClothingGenerator() {
     setUploadedImage(URL.createObjectURL(file));
     setGeneratedImage(null);
     setResponse("");
+    setAlteration("");
     const reader = new FileReader();
     reader.onload = () => {
       const result = reader.result as string;
@@ -40,6 +45,10 @@ export default function ClothingGenerator() {
     setLoading(true);
     setResponse("Analyzing...");
     setGeneratedImage(null);
+    setAlteration("");
+
+    const skills = user?.skills?.join(", ") || "no specific skills listed";
+    const proficiency = user?.proficiencyLevel || "beginner";
 
     try {
       const describeRes = await fetch(
@@ -50,7 +59,18 @@ export default function ClothingGenerator() {
           body: JSON.stringify({
             contents: [{
               parts: [
-                { text: `This image contains a ${clothingType}. Describe this ${clothingType} in detail including color, style, fit, and fabric. Be specific so an AI image generator can recreate it. Only describe the ${clothingType}, not the person.` },
+                {
+                  text: `This image contains a ${clothingType}. The user has the following sewing/crafting skills: ${skills}. Their proficiency level is: ${proficiency}.
+
+Do two things:
+1. Describe the ${clothingType} in detail (color, style, fit, fabric).
+2. Suggest ONE specific DIY alteration appropriate for a ${proficiency} skill level (e.g. cinching the waist, making it off-shoulder, cropping, distressing, tie-dye, patchwork, embroidery, etc).
+
+Respond in this exact format:
+DESCRIPTION: [detailed description of the clothing]
+ALTERATION: [specific alteration suggestion with brief how-to instructions]
+ALTERED_PROMPT: [detailed image generation prompt of what the ${clothingType} looks like AFTER the alteration, white background, no person, product photo style]`
+                },
                 { inline_data: { mime_type: base64.mime, data: base64.data } },
               ],
             }],
@@ -59,13 +79,22 @@ export default function ClothingGenerator() {
       );
 
       const describeData = await describeRes.json();
-      const clothingDescription = describeData.candidates?.[0]?.content?.parts?.[0]?.text;
+      const fullResponse = describeData.candidates?.[0]?.content?.parts?.[0]?.text;
 
-      if (!clothingDescription) {
+      if (!fullResponse) {
         setResponse("Could not describe image");
         return;
       }
 
+      console.log("Gemini response:", fullResponse);
+
+      const alterationMatch = fullResponse.match(/ALTERATION:\s*(.+?)(?=ALTERED_PROMPT:|$)/s);
+      const promptMatch = fullResponse.match(/ALTERED_PROMPT:\s*(.+?)$/s);
+
+      const alterationText = alterationMatch?.[1]?.trim() || "Custom alteration";
+      const imagePrompt = promptMatch?.[1]?.trim() || fullResponse;
+
+      setAlteration(alterationText);
       setResponse("Generating...");
 
       const startRes = await fetch("/replicate-api/v1/models/black-forest-labs/flux-2-pro/predictions", {
@@ -77,7 +106,7 @@ export default function ClothingGenerator() {
         },
         body: JSON.stringify({
           input: {
-            prompt: `Fashion product photo of a ${clothingType}: ${clothingDescription.slice(0, 250)}, white background, studio lighting, no model, no person`,
+            prompt: `Fashion product photo, white background, studio lighting, no model, no person: ${imagePrompt.slice(0, 400)}`,
             num_outputs: 1,
           },
         }),
@@ -170,7 +199,6 @@ export default function ClothingGenerator() {
                 </div>
                 <div className="text-center">
                   <p className="text-sm font-medium">Drop your piece here</p>
-                  <p className="text-xs mt-1">PNG, JPG up to 10MB</p>
                 </div>
               </button>
             )}
@@ -214,6 +242,14 @@ export default function ClothingGenerator() {
               </div>
             )}
           </div>
+
+          {/* alteration suggestion */}
+          {alteration && !loading && (
+            <div className="px-8 py-4 border-t bg-muted/30">
+              <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-1">✂️ DIY Suggestion</p>
+              <p className="text-sm">{alteration}</p>
+            </div>
+          )}
         </div>
       </div>
 

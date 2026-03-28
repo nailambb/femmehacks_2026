@@ -5,6 +5,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useState } from "react";
 
 export const Route = createFileRoute("/profilepage")({
@@ -25,7 +32,6 @@ function ProfilePage() {
   const [skillInput, setSkillInput] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // edit state
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
@@ -96,6 +102,12 @@ function ProfilePage() {
     }
   };
 
+  const handleProficiencyChange = async (value: string) => {
+    await updateUser({
+      proficiencyLevel: value as "beginner" | "intermediate" | "advanced",
+    });
+  };
+
   return (
     <div className="h-[calc(100vh-57px)] flex flex-col bg-white">
 
@@ -130,11 +142,8 @@ function ProfilePage() {
               </div>
             </div>
           ) : (
-            /* edit mode */
             <div className="flex flex-col gap-4">
               <p className="text-sm font-medium">Edit Profile</p>
-
-              {/* image preview + URL input */}
               <div className="flex items-center gap-4">
                 <Avatar className="h-14 w-14">
                   <AvatarImage src={editImage} alt={editName} />
@@ -149,7 +158,6 @@ function ProfilePage() {
                   className="h-9 text-sm flex-1"
                 />
               </div>
-
               <Input
                 placeholder="Name"
                 value={editName}
@@ -163,27 +171,41 @@ function ProfilePage() {
                 className="h-9 text-sm"
                 type="email"
               />
-
               <div className="flex gap-2">
-                <Button
-                  onClick={saveEdit}
-                  disabled={editSaving}
-                  size="sm"
-                  className="h-9 text-xs"
-                >
+                <Button onClick={saveEdit} disabled={editSaving} size="sm" className="h-9 text-xs">
                   {editSaving ? "Saving..." : "Save Changes"}
                 </Button>
-                <Button
-                  onClick={() => setEditing(false)}
-                  variant="outline"
-                  size="sm"
-                  className="h-9 text-xs"
-                >
+                <Button onClick={() => setEditing(false)} variant="outline" size="sm" className="h-9 text-xs">
                   Cancel
                 </Button>
               </div>
             </div>
           )}
+
+          <div className="h-px bg-border" />
+
+          {/* proficiency */}
+          <div className="flex flex-col gap-5">
+            <div>
+              <p className="text-sm font-medium">Proficiency Level</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Your overall sewing and crafting experience
+              </p>
+            </div>
+            <Select
+              value={user.proficiencyLevel ?? ""}
+              onValueChange={handleProficiencyChange}
+            >
+              <SelectTrigger className="w-48 h-9 text-sm">
+                <SelectValue placeholder="Select level" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="beginner">Beginner</SelectItem>
+                <SelectItem value="intermediate">Intermediate</SelectItem>
+                <SelectItem value="advanced">Advanced</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
           <div className="h-px bg-border" />
 
