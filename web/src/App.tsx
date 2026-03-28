@@ -1,6 +1,7 @@
 import { useConvexAuth } from "convex/react";
 import { useState } from "react";
 import { AuthModal } from "./components/AuthModal";
+import ClothingGen from "./components/ClothingGen";
 
 export default function App() {
   const { isAuthenticated } = useConvexAuth();
@@ -16,7 +17,7 @@ export default function App() {
 
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
 
-      {isAuthenticated && <p>You're logged in!</p>}
+      {isAuthenticated && <p>You're logged in!</p> && <ClothingGen />}
     </div>
   );
 }
