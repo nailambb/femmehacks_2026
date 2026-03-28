@@ -45,10 +45,6 @@ function Home() {
             Sign In
           </Button>
         </div>
-
-        <p className="text-xs text-muted-foreground text-center">
-          No credit card required
-        </p>
       </div>
 
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}

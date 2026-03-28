@@ -19,6 +19,24 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [magicSent, setMagicSent] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetError, setResetError] = useState("");
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetError("");
+    try {
+      await signIn("resend", { email: resetEmail });
+      setMagicSent(true);
+    } catch (err: any) {
+      // Show the error from auth.ts if account doesn't exist
+      setResetError(
+        err?.message?.includes("No account found")
+          ? "No account found with that email."
+          : "Something went wrong. Try again."
+      );
+    }
+  };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,17 +55,6 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
     try {
       await signIn("password", { email, password, name, flow: "signUp" });
       onClose();
-    } catch {
-      setError("Something went wrong. Try again.");
-    }
-  };
-
-  const handleMagicLink = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    try {
-      await signIn("resend", { email });
-      setMagicSent(true);
     } catch {
       setError("Something went wrong. Try again.");
     }
@@ -141,26 +148,29 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
 
               <div className="border-t pt-4 mt-1">
                 <p className="text-xs text-muted-foreground text-center mb-2">
-                  Forgot password?
+                  Forgot your password?
                 </p>
                 {magicSent ? (
-                  <p className="text-xs text-center text-green-600">✓ Check your email</p>
+                  <p className="text-xs text-center text-green-600">
+                    ✓ Check your email for a sign-in link
+                  </p>
                 ) : (
-                  <form onSubmit={handleMagicLink} className="flex gap-2">
+                  <form onSubmit={handlePasswordReset} className="flex flex-col gap-2">
                     <Input
                       type="email"
-                      placeholder="Your email"
-                      value={email}
-                      onChange={e => setEmail(e.target.value)}
-                      className="h-9 text-sm flex-1"
+                      placeholder="Your account email"
+                      value={resetEmail}
+                      onChange={e => setResetEmail(e.target.value)}
+                      className="h-9 text-sm"
                       required
                     />
+                    {resetError && <p className="text-xs text-red-500">{resetError}</p>}
                     <Button
                       type="submit"
                       variant="outline"
-                      className="h-9 text-xs whitespace-nowrap"
+                      className="h-9 text-xs w-full"
                     >
-                      Send Link
+                      Send Reset Link
                     </Button>
                   </form>
                 )}

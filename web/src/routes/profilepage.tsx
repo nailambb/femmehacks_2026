@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 export const Route = createFileRoute("/profilepage")({
   component: ProfilePage,
@@ -28,6 +28,8 @@ function ProfilePage() {
   const user = useQuery(api.users.getCurrentUser, isAuthenticated ? {} : "skip");
   const updateUser = useMutation(api.users.updateUser);
   const updateProfile = useMutation(api.users.updateProfile);
+  const generateUploadUrl = useMutation(api.users.generateUploadUrl);
+  const saveProfileImage = useMutation(api.users.saveProfileImage);
 
   const [skillInput, setSkillInput] = useState("");
   const [saving, setSaving] = useState(false);
@@ -35,8 +37,10 @@ function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
-  const [editImage, setEditImage] = useState("");
+  const [editImagePreview, setEditImagePreview] = useState<string>("");
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
   const [editSaving, setEditSaving] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isAuthenticated) {
     return (
@@ -67,19 +71,48 @@ function ProfilePage() {
   const openEdit = () => {
     setEditName(user.name ?? "");
     setEditEmail(user.email ?? "");
-    setEditImage(user.image ?? "");
+    setEditImagePreview(user.image ?? "");
+    setEditImageFile(null);
     setEditing(true);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setEditImageFile(file);
+    // Show local preview immediately
+    setEditImagePreview(URL.createObjectURL(file));
   };
 
   const saveEdit = async () => {
     setEditSaving(true);
-    await updateProfile({
-      name: editName || undefined,
-      email: editEmail || undefined,
-      image: editImage || undefined,
-    });
-    setEditing(false);
-    setEditSaving(false);
+    try {
+      // If user picked a new image file, upload it first
+      if (editImageFile) {
+        const uploadUrl = await generateUploadUrl();
+
+        const res = await fetch(uploadUrl, {
+          method: "POST",
+          headers: { "Content-Type": editImageFile.type },
+          body: editImageFile,
+        });
+
+        if (!res.ok) throw new Error("Upload failed");
+
+        const { storageId } = await res.json();
+        await saveProfileImage({ storageId });
+      }
+
+      // Save name + email separately
+      await updateProfile({
+        name: editName || undefined,
+        email: editEmail || undefined,
+      });
+
+      setEditing(false);
+    } finally {
+      setEditSaving(false);
+    }
   };
 
   const addSkill = async (skill: string) => {
@@ -127,7 +160,7 @@ function ProfilePage() {
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-lg mx-auto px-8 py-10 flex flex-col gap-10">
 
-          {/* user info — view mode */}
+          {/* user info */}
           {!editing ? (
             <div className="flex items-center gap-4">
               <Avatar className="h-14 w-14">
@@ -144,20 +177,41 @@ function ProfilePage() {
           ) : (
             <div className="flex flex-col gap-4">
               <p className="text-sm font-medium">Edit Profile</p>
+
+              {/* Avatar + file picker */}
               <div className="flex items-center gap-4">
                 <Avatar className="h-14 w-14">
-                  <AvatarImage src={editImage} alt={editName} />
+                  <AvatarImage src={editImagePreview} alt={editName} />
                   <AvatarFallback className="text-lg bg-muted">
                     {editName?.[0]?.toUpperCase() ?? "?"}
                   </AvatarFallback>
                 </Avatar>
-                <Input
-                  placeholder="Image URL (paste a link)"
-                  value={editImage}
-                  onChange={e => setEditImage(e.target.value)}
-                  className="h-9 text-sm flex-1"
-                />
+                <div className="flex flex-col gap-1">
+                  {/* Hidden real file input */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    Choose Photo
+                  </Button>
+                  {editImageFile && (
+                    <p className="text-xs text-muted-foreground truncate max-w-[180px]">
+                      {editImageFile.name}
+                    </p>
+                  )}
+                </div>
               </div>
+
               <Input
                 placeholder="Name"
                 value={editName}
@@ -184,7 +238,7 @@ function ProfilePage() {
 
           <div className="h-px bg-border" />
 
-          {/* proficiency */}
+          {/* proficiency — unchanged */}
           <div className="flex flex-col gap-5">
             <div>
               <p className="text-sm font-medium">Proficiency Level</p>
@@ -192,10 +246,7 @@ function ProfilePage() {
                 Your overall sewing and crafting experience
               </p>
             </div>
-            <Select
-              value={user.proficiencyLevel ?? ""}
-              onValueChange={handleProficiencyChange}
-            >
+            <Select value={user.proficiencyLevel ?? ""} onValueChange={handleProficiencyChange}>
               <SelectTrigger className="w-48 h-9 text-sm">
                 <SelectValue placeholder="Select level" />
               </SelectTrigger>
@@ -209,7 +260,7 @@ function ProfilePage() {
 
           <div className="h-px bg-border" />
 
-          {/* skills */}
+          {/* skills — unchanged */}
           <div className="flex flex-col gap-5">
             <div>
               <p className="text-sm font-medium">Skills</p>
@@ -217,7 +268,6 @@ function ProfilePage() {
                 Add skills that describe your experience
               </p>
             </div>
-
             {currentSkills.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {currentSkills.map(skill => (
@@ -234,7 +284,6 @@ function ProfilePage() {
             ) : (
               <p className="text-xs text-muted-foreground">No skills added yet.</p>
             )}
-
             <div className="flex gap-2">
               <Input
                 placeholder="Type a skill and press Enter..."
@@ -253,7 +302,6 @@ function ProfilePage() {
                 Add
               </Button>
             </div>
-
             <div>
               <p className="text-xs text-muted-foreground mb-2 uppercase tracking-widest">
                 Suggestions
