@@ -8,7 +8,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 
 type AuthStep = "landing" | "signin" | "signup";
 
@@ -56,103 +55,197 @@ export function AuthModal({ onClose }: { onClose: () => void }) {
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-sm p-0 overflow-hidden">
 
+        {/* LANDING */}
         {step === "landing" && (
-          <>
-            <DialogHeader>
-              <DialogTitle className="text-2xl text-center">Welcome to Alter'd</DialogTitle>
+          <div className="p-8">
+            <DialogHeader className="mb-6">
+              <DialogTitle className="text-xl font-semibold tracking-tight">
+                Welcome to Alter'd
+              </DialogTitle>
+              <p className="text-sm text-muted-foreground">
+                Sign in or create an account to continue
+              </p>
             </DialogHeader>
-            <div className="flex flex-col gap-3 mt-2">
-              <Button variant="outline" onClick={() => setStep("signin")} className="w-full">
+            <div className="flex flex-col gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setStep("signin")}
+                className="w-full h-9 text-sm"
+              >
                 Sign In
               </Button>
-              <Button onClick={() => setStep("signup")} className="w-full">
+              <Button
+                onClick={() => setStep("signup")}
+                className="w-full h-9 text-sm"
+              >
                 Create Account
               </Button>
             </div>
-          </>
+          </div>
         )}
 
+        {/* SIGN IN */}
         {step === "signin" && (
-          <>
-            <DialogHeader>
-              <button onClick={() => setStep("landing")} className="text-sm text-muted-foreground text-left mb-1">
-                ← Back
-              </button>
-              <DialogTitle className="text-2xl">Sign In</DialogTitle>
+          <div className="p-8">
+            <button
+              onClick={() => setStep("landing")}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors mb-6 block"
+            >
+              ← Back
+            </button>
+            <DialogHeader className="mb-6">
+              <DialogTitle className="text-xl font-semibold tracking-tight">
+                Sign In
+              </DialogTitle>
             </DialogHeader>
 
-            <Button variant="outline" onClick={() => signIn("google")} className="w-full">
-              Continue with Google
-            </Button>
+            <div className="flex flex-col gap-3">
+              <Button
+                variant="outline"
+                onClick={() => signIn("google")}
+                className="w-full h-9 text-sm"
+              >
+                Continue with Google
+              </Button>
 
-            <div className="flex items-center gap-2">
-              <Separator className="flex-1" />
-              <span className="text-xs text-muted-foreground">or sign in with email</span>
-              <Separator className="flex-1" />
-            </div>
+              <div className="flex items-center gap-3 my-1">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-xs text-muted-foreground">or</span>
+                <div className="flex-1 h-px bg-border" />
+              </div>
 
-            <form onSubmit={handleSignIn} className="flex flex-col gap-3">
-              <Input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required />
-              <Input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required />
-              {error && <p className="text-red-500 text-sm">{error}</p>}
-              <Button type="submit" className="w-full">Sign In</Button>
-            </form>
+              <form onSubmit={handleSignIn} className="flex flex-col gap-2">
+                <Input
+                  type="email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  className="h-9 text-sm"
+                  required
+                />
+                <Input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  className="h-9 text-sm"
+                  required
+                />
+                {error && <p className="text-xs text-red-500">{error}</p>}
+                <Button type="submit" className="w-full h-9 text-sm mt-1">
+                  Sign In →
+                </Button>
+              </form>
 
-            <div className="border-t pt-4">
-              <p className="text-sm text-muted-foreground text-center mb-3">
-                Forgot password? Use a magic link instead
+              <div className="border-t pt-4 mt-1">
+                <p className="text-xs text-muted-foreground text-center mb-2">
+                  Forgot password?
+                </p>
+                {magicSent ? (
+                  <p className="text-xs text-center text-green-600">✓ Check your email</p>
+                ) : (
+                  <form onSubmit={handleMagicLink} className="flex gap-2">
+                    <Input
+                      type="email"
+                      placeholder="Your email"
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      className="h-9 text-sm flex-1"
+                      required
+                    />
+                    <Button
+                      type="submit"
+                      variant="outline"
+                      className="h-9 text-xs whitespace-nowrap"
+                    >
+                      Send Link
+                    </Button>
+                  </form>
+                )}
+              </div>
+
+              <p className="text-xs text-muted-foreground text-center">
+                No account?{" "}
+                <button onClick={() => setStep("signup")} className="underline underline-offset-2">
+                  Sign up
+                </button>
               </p>
-              {magicSent ? (
-                <p className="text-green-600 text-sm text-center">✓ Check your email!</p>
-              ) : (
-                <form onSubmit={handleMagicLink} className="flex gap-2">
-                  <Input type="email" placeholder="Your email" value={email} onChange={e => setEmail(e.target.value)} required />
-                  <Button type="submit" variant="outline" className="whitespace-nowrap">Send Link</Button>
-                </form>
-              )}
             </div>
-
-            <p className="text-xs text-muted-foreground text-center">
-              Don't have an account?{" "}
-              <button onClick={() => setStep("signup")} className="underline">Sign up</button>
-            </p>
-          </>
+          </div>
         )}
 
+        {/* SIGN UP */}
         {step === "signup" && (
-          <>
-            <DialogHeader>
-              <button onClick={() => setStep("landing")} className="text-sm text-muted-foreground text-left mb-1">
-                ← Back
-              </button>
-              <DialogTitle className="text-2xl">Create Account</DialogTitle>
+          <div className="p-8">
+            <button
+              onClick={() => setStep("landing")}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors mb-6 block"
+            >
+              ← Back
+            </button>
+            <DialogHeader className="mb-6">
+              <DialogTitle className="text-xl font-semibold tracking-tight">
+                Create Account
+              </DialogTitle>
             </DialogHeader>
 
-            <Button variant="outline" onClick={() => signIn("google")} className="w-full">
-              Sign up with Google
-            </Button>
+            <div className="flex flex-col gap-3">
+              <Button
+                variant="outline"
+                onClick={() => signIn("google")}
+                className="w-full h-9 text-sm"
+              >
+                Continue with Google
+              </Button>
 
-            <div className="flex items-center gap-2">
-              <Separator className="flex-1" />
-              <span className="text-xs text-muted-foreground">or sign up with email</span>
-              <Separator className="flex-1" />
+              <div className="flex items-center gap-3 my-1">
+                <div className="flex-1 h-px bg-border" />
+                <span className="text-xs text-muted-foreground">or</span>
+                <div className="flex-1 h-px bg-border" />
+              </div>
+
+              <form onSubmit={handleSignUp} className="flex flex-col gap-2">
+                <Input
+                  type="text"
+                  placeholder="Your name"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  className="h-9 text-sm"
+                  required
+                />
+                <Input
+                  type="email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  className="h-9 text-sm"
+                  required
+                />
+                <Input
+                  type="password"
+                  placeholder="Password (min 8 characters)"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  className="h-9 text-sm"
+                  minLength={8}
+                  required
+                />
+                {error && <p className="text-xs text-red-500">{error}</p>}
+                <Button type="submit" className="w-full h-9 text-sm mt-1">
+                  Create Account →
+                </Button>
+              </form>
+
+              <p className="text-xs text-muted-foreground text-center">
+                Already have an account?{" "}
+                <button onClick={() => setStep("signin")} className="underline underline-offset-2">
+                  Sign in
+                </button>
+              </p>
             </div>
-
-            <form onSubmit={handleSignUp} className="flex flex-col gap-3">
-              <Input type="text" placeholder="Your name" value={name} onChange={e => setName(e.target.value)} required />
-              <Input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required />
-              <Input type="password" placeholder="Password (min 8 characters)" value={password} onChange={e => setPassword(e.target.value)} minLength={8} required />
-              {error && <p className="text-red-500 text-sm">{error}</p>}
-              <Button type="submit" className="w-full">Create Account</Button>
-            </form>
-
-            <p className="text-xs text-muted-foreground text-center">
-              Already have an account?{" "}
-              <button onClick={() => setStep("signin")} className="underline">Sign in</button>
-            </p>
-          </>
+          </div>
         )}
 
       </DialogContent>

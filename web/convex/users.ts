@@ -31,3 +31,21 @@ export const updateUser = mutation({
     });
   },
 });
+
+export const updateProfile = mutation({
+  args: {
+    name: v.optional(v.string()),
+    email: v.optional(v.string()),
+    image: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return;
+    const db = ctx.db as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+    await db.patch(userId, {
+      ...(args.name !== undefined && { name: args.name }),
+      ...(args.email !== undefined && { email: args.email }),
+      ...(args.image !== undefined && { image: args.image }),
+    });
+  },
+});

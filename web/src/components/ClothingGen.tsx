@@ -1,4 +1,13 @@
 import { useRef, useState } from 'react'
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_KEY;
 
@@ -15,11 +24,9 @@ export default function ClothingGenerator() {
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     setUploadedImage(URL.createObjectURL(file));
     setGeneratedImage(null);
     setResponse("");
-
     const reader = new FileReader();
     reader.onload = () => {
       const result = reader.result as string;
@@ -31,7 +38,7 @@ export default function ClothingGenerator() {
   const sendToGemini = async () => {
     if (!base64) return;
     setLoading(true);
-    setResponse("Describing clothing...");
+    setResponse("Analyzing...");
     setGeneratedImage(null);
 
     try {
@@ -41,14 +48,12 @@ export default function ClothingGenerator() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  { text: `This image contains a ${clothingType}. Describe this ${clothingType} in detail including color, style, fit, and fabric. Be specific so an AI image generator can recreate it. Only describe the ${clothingType}, not the person.` },
-                  { inline_data: { mime_type: base64.mime, data: base64.data } },
-                ],
-              },
-            ],
+            contents: [{
+              parts: [
+                { text: `This image contains a ${clothingType}. Describe this ${clothingType} in detail including color, style, fit, and fabric. Be specific so an AI image generator can recreate it. Only describe the ${clothingType}, not the person.` },
+                { inline_data: { mime_type: base64.mime, data: base64.data } },
+              ],
+            }],
           }),
         }
       );
@@ -61,8 +66,7 @@ export default function ClothingGenerator() {
         return;
       }
 
-      console.log("Description:", clothingDescription);
-      setResponse("Generating image...");
+      setResponse("Generating...");
 
       const startRes = await fetch("/replicate-api/v1/models/black-forest-labs/flux-2-pro/predictions", {
         method: "POST",
@@ -80,19 +84,15 @@ export default function ClothingGenerator() {
       });
 
       const predictionData = await startRes.json();
-      console.log(predictionData);
-
       const imgUrl = Array.isArray(predictionData.output)
         ? predictionData.output[0]
         : predictionData.output;
-
-      console.log("Image URL:", imgUrl);
 
       if (imgUrl) {
         setImageLoading(true);
         setGeneratedImage(imgUrl);
       } else {
-        setResponse("No image: " + JSON.stringify(predictionData));
+        setResponse("No image returned");
       }
 
     } catch (err) {
@@ -103,52 +103,134 @@ export default function ClothingGenerator() {
   };
 
   return (
-    <div>
-      <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFile} />
+    <div className="h-[calc(100vh-57px)] flex flex-col bg-white">
 
-      <button onClick={() => fileInputRef.current?.click()}>Upload Image</button>
-
-      {uploadedImage && (
+      {/* top bar */}
+      <div className="border-b px-8 py-4 flex items-center justify-between">
         <div>
-          <p>Uploaded:</p>
-          <img src={uploadedImage} alt="uploaded" style={{ width: "100%", marginTop: 8 }} />
-
-          <select
-            value={clothingType}
-            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setClothingType(e.target.value)}
-            style={{ marginTop: 10, display: "block", padding: "8px", width: "100%" }}
-          >
-            <option value="shirt">Shirt / Top</option>
-            <option value="pants">Pants / Bottoms</option>
-            <option value="dress">Dress</option>
-            <option value="jacket">Jacket / Outerwear</option>
-            <option value="shoes">Shoes</option>
-            <option value="accessory">Accessory</option>
-          </select>
-
-          <button onClick={sendToGemini} disabled={loading} style={{ marginTop: 10 }}>
-            {loading ? response : "Generate Clothing Image"}
-          </button>
+          <h1 className="text-lg font-semibold tracking-tight">Studio</h1>
+          <p className="text-xs text-muted-foreground">Upload a piece, generate a new look</p>
         </div>
-      )}
+        {uploadedImage && (
+          <Select value={clothingType} onValueChange={setClothingType}>
+            <SelectTrigger className="w-44 h-8 text-sm">
+              <SelectValue placeholder="Clothing type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="shirt">Shirt / Top</SelectItem>
+              <SelectItem value="pants">Pants / Bottoms</SelectItem>
+              <SelectItem value="dress">Dress</SelectItem>
+              <SelectItem value="jacket">Jacket / Outerwear</SelectItem>
+              <SelectItem value="shoes">Shoes</SelectItem>
+              <SelectItem value="accessory">Accessory</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+      </div>
 
-      {generatedImage && (
-        <div>
-          <p>Generated:</p>
-          {imageLoading && <p>Loading image...</p>}
-          <img
-            src={generatedImage}
-            alt="generated"
-            style={{ width: "100%", marginTop: 8, display: imageLoading ? "none" : "block" }}
-            onLoad={() => { setImageLoading(false); setResponse("Done!"); }}
-            onError={() => { setImageLoading(false); setResponse("Image failed to load, try again"); }}
+      {/* main canvas */}
+      <div className="flex-1 grid grid-cols-2 divide-x overflow-hidden">
+
+        {/* LEFT — upload */}
+        <div className="flex flex-col">
+          <div className="px-8 py-4 border-b flex items-center justify-between">
+            <span className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Original</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs h-7"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {uploadedImage ? "Replace" : "Upload"}
+            </Button>
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={handleFile}
           />
-        </div>
-      )}
 
-      {response && response !== "Done!" && (
-        <p style={{ color: "red" }}>{response}</p>
-      )}
+          <div className="flex-1 flex items-center justify-center p-8">
+            {uploadedImage ? (
+              <img
+                src={uploadedImage}
+                alt="uploaded"
+                className="max-h-full max-w-full object-contain rounded-lg"
+              />
+            ) : (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full h-full max-w-sm max-h-80 border-2 border-dashed border-muted rounded-xl flex flex-col items-center justify-center gap-3 text-muted-foreground hover:border-foreground hover:text-foreground transition-colors group"
+              >
+                <div className="h-10 w-10 rounded-full border-2 border-current flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+                  +
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-medium">Drop your piece here</p>
+                  <p className="text-xs mt-1">PNG, JPG up to 10MB</p>
+                </div>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* RIGHT — generated */}
+        <div className="flex flex-col">
+          <div className="px-8 py-4 border-b flex items-center justify-between">
+            <span className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Generated</span>
+            {generatedImage && (
+              <Badge variant="secondary" className="text-xs font-normal">
+                AI
+              </Badge>
+            )}
+          </div>
+
+          <div className="flex-1 flex items-center justify-center p-8">
+            {loading ? (
+              <div className="flex flex-col items-center gap-4 text-muted-foreground">
+                <div className="h-8 w-8 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
+                <p className="text-sm">{response}</p>
+              </div>
+            ) : generatedImage ? (
+              <>
+                {imageLoading && (
+                  <div className="w-full max-w-sm aspect-square rounded-xl bg-muted animate-pulse" />
+                )}
+                <img
+                  src={generatedImage}
+                  alt="generated"
+                  className="max-h-full max-w-full object-contain rounded-lg"
+                  style={{ display: imageLoading ? "none" : "block" }}
+                  onLoad={() => { setImageLoading(false); setResponse("Done!"); }}
+                  onError={() => { setImageLoading(false); setResponse("Image failed to load"); }}
+                />
+              </>
+            ) : (
+              <div className="text-center text-muted-foreground">
+                <p className="text-sm">Your generated image will appear here</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* bottom bar */}
+      <div className="border-t px-8 py-4 flex items-center justify-between">
+        <p className="text-xs text-muted-foreground">
+          {response && response !== "Done!" && !loading ? response : "Ready"}
+        </p>
+        <Button
+          onClick={sendToGemini}
+          disabled={loading || !uploadedImage}
+          className="px-8"
+        >
+          {loading ? "Generating..." : "Generate →"}
+        </Button>
+      </div>
+
     </div>
   );
 }

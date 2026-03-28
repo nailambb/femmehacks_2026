@@ -25,10 +25,10 @@
     "noUncheckedSideEffectImports": true,
 
     /* Path alias */
-    "baseUrl": ".",         // ← add this
-    "paths": {              // ← add this
-      "@/*": ["./src/*"]   // ← add this
-    }                       // ← add this
+    "baseUrl": ".",        
+    "paths": {       
+      "@/*": ["./src/*"] 
+    }                  
   },
   "include": ["src"]
 }
