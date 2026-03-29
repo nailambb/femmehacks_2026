@@ -21,4 +21,14 @@ export default defineSchema({
   })
   .index("email", ["email"])
   .index("phone", ["phone"]),
+
+  generationHistory: defineTable({
+    userId: v.id("users"),
+    clothingType: v.string(),
+    alteration: v.string(),
+    generatedImageUrl: v.string(),
+    uploadedImageUrl: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"]),
 });
+

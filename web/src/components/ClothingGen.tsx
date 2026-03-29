@@ -24,6 +24,7 @@ export default function ClothingGenerator() {
   const [loading, setLoading] = useState(false);
   const [clothingType, setClothingType] = useState<string>("shirt");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

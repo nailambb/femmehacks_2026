@@ -49,3 +49,44 @@ export const updateProfile = mutation({
     });
   },
 });
+
+// makes sure multiple user's of same email don't get created 
+export const getUserByEmail = query({
+  args: { email: v.string() },
+  handler: async (ctx, { email }) => {
+    const normalized = email.trim().toLowerCase();
+
+    return await ctx.db
+      .query("users")
+      .withIndex("email", q => q.eq("email", normalized))
+      .first();
+  },
+});
+
+
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+export const saveProfileImage = mutation({
+  args: {
+    storageId: v.id("_storage"),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    // Get the public URL for the stored file
+    const url = await ctx.storage.getUrl(args.storageId);
+    if (!url) throw new Error("Failed to get image URL");
+
+    const db = ctx.db as any;
+    await db.patch(userId, { image: url });
+    return url;
+  },
+});
