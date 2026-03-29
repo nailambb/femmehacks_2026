@@ -1,6 +1,6 @@
-# Name in progress
+# Alter'd
 
-// details of the website/app
+Have you ever wanted to customize your clothing, but are unsure what to do? Then Alter'd is the best way to figure that out! It takes you interests and skill level and outputs something new :)
 
 ## Tech Stack
 
